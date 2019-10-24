@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+
+from mutagen.mp4 import MP4
+import glob
+import subprocess
+import sys
+import os
+import json
+
+tags = {
+    'personality': u'©ART',
+    'program': u'©alb',
+    'genre': u'©gen',
+    'encoder': u'©too',
+    'year': u'©day',
+    'title': u'©nam',
+}
+
+def load_tags(filename="m4atag.json"):
+    program_db = {}
+    if os.path.isfile(filename):
+        with open(filename, "r") as f:
+            try:
+                j = json.load(f)
+                for parsonality in j:
+                    program_db[parsonality] = {}
+                    for item in j[parsonality]:
+                        if item in tags:
+                            program_db[parsonality][tags[item]] = j[parsonality][item]
+                        else:
+                            print("unknown tag in JSON: {'%s': {'%s': '%s'}}" % (parsonality, item, j[parsonality][item]))
+                            program_db[parsonality][item] = j[parsonality][item]
+
+            except Exception as e:
+                print("JSON syntax error(%s)" % filename, file=sys.stderr)
+                print(e, file=sys.stderr)
+                exit(1)
+    return program_db
+
+
+def add_tags(m4afile, program_db={}):
+    directory, filename = os.path.split(m4afile)
+    m4aaudio = MP4(m4afile)
+    prefix = filename.split('.')[0]
+    program, date = prefix.split('_')
+    year, month, day = date.split('-')
+    if program in program_db:
+        for item in program_db[program]:
+            m4aaudio[item] = [program_db[program][item]]
+        m4aaudio[u'©nam'] = ["%s%s%s" % (year, month, day)]
+        m4aaudio[u'©day'] = [year]
+        m4aaudio.save()
+
+
+def show_tags(m4afile):
+    m4aaudio = MP4(m4afile)
+    print(m4afile)
+    for tag in sorted(m4aaudio):
+        if tag in tags.values():
+            key = [k for k, v in tags.items() if v == tag]
+            print(key[0], ':', m4aaudio[tag])
+        else:
+            print(tag, ':', m4aaudio[tag])
+    print()
+
+
+def main():
+    if "-h" in sys.argv:
+        print("Usage: %s [-s] m4afile..." % (sys.argv[0].split('/')[-1]))
+        print("  -s:  Show tags")
+        print("  -h:  Show help")
+        return
+        
+    show_tags_mode = False
+    if "-s" in sys.argv:
+        show_tags_mode = True
+
+    program_db = load_tags("m4atag.json")
+    
+    for m4afile in sys.argv[1:]:
+        if not os.path.exists(m4afile):
+            continue
+
+        # Is it m4a file?
+        command = "/usr/bin/file %s" % (m4afile)
+        try:
+            res = subprocess.run(command, shell=True, check=True,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE,
+                                 universal_newlines=True)
+        except subprocess.CalledProcessError:
+            print("failed file command")
+            exit(1)
+        if 'Apple iTunes' not in res.stdout:
+            continue
+
+        if show_tags_mode:
+            show_tags(m4afile)
+        else:
+            add_tags(m4afile, program_db)
+
+    
+if __name__ == "__main__":
+    main()

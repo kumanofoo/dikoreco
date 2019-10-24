@@ -1,0 +1,3 @@
+Usage: m4atag [-s] m4afile...
+  -s:  Show tags
+  -h:  Show help

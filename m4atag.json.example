@@ -1,0 +1,12 @@
+{
+    "audrey": {
+        "personality": "Audrey",
+        "program": "Audrey no all night nippon",
+        "genre": "radio"
+    },
+    "megane": {
+        "personality": "Ogiyahagi",
+        "program": "Ogiyahagi no megane biiki",
+        "genre": "radio"
+    }
+}
