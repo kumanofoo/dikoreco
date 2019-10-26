@@ -1,0 +1,15 @@
+usage : dikoreco OUTFILEPREFIX RECTIMEMIN CHANNEL
+
+CHANNEL:
+  TBS       TBS Radio
+  QRR       Bunka Hoso
+  LFR       Nippon Hoso
+  RN1       Radio NIKKEI 1
+  RN2       Radio NIKKEI 2
+  INT       InterFM897
+  FMT       TOKYO FM
+  FMJ       J-WAVE
+  JORF      Radio Nippon
+  BAYFM78   bayfm78
+  NACK5     NACK5
+  YFM       FM Yokohama
