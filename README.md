@@ -66,10 +66,11 @@ Edit tags in m4atag.json.
 
 ## Requirements
 ### dikoreco (bash)
-- swfextract(0.9.2)
+- swfextract(swftools 0.9.2)
 - rtmpdump(2.4)
 - ffmpeg(3.2.14)
 - wget(1.18)
+- xmllint(libxml2-utils 2.9.4)
 
 ### m4atag (Python3)
 - mutagen(1.36)
