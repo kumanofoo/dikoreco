@@ -6,7 +6,7 @@ This downloads [radiko](http://radiko.jp/) sound and save as m4a with tags.
 ## Original script
 - [rec_radiko.sh](https://gist.github.com/saiten/875864)
 - [とあるサイトの録音手段 (シェルスクリプト)](http://blog.half-moon.org/archives/963)
-
+- [簡易Radiko録音スクリプト](https://gist.github.com/matchy2/3956266)
 
 ## Usage
 ```
@@ -66,10 +66,8 @@ Edit tags in m4atag.json.
 
 ## Requirements
 ### dikoreco (bash)
-- swfextract(swftools 0.9.2)
-- rtmpdump(2.4)
 - ffmpeg(3.2.14)
-- wget(1.18)
+- curl(7.52.1)
 - xmllint(libxml2-utils 2.9.4)
 
 ### m4atag (Python3)
@@ -99,4 +97,32 @@ Specify a directory of a path to log if you want.
 By default, dikoreco outputs logs to ${HOME}/.dikoreco.log.
 ```Shell
 LOGFILE=${HOME}/.dikoreco.log
+```
+
+## Development
+### Test
+Install Bats(Bash Automated Testing System) to test. And run script.
+
+```Shell
+./test/run
+```
+
+### Docker
+#### Build image
+```Shell
+$ docker build -t dikoreco .
+```
+#### Run the container
+```Shell
+$ docker-compose up -d
+```
+
+#### Run test in the container
+```Shell
+$ docker exec -it dikoreco_container bash -c "test/run"
+```
+
+#### Stop the container
+```Shell
+$ docker-compose down
 ```

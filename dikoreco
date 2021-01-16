@@ -1,5 +1,5 @@
 #!/bin/bash
-#
+
 function show_channel() {
   cat <<EOD
 
@@ -19,10 +19,17 @@ CHANNEL:
 EOD
 }
 
+pid=$$
+date=`date +%Y-%m-%d`
+
 OUTFILEBASEPATH=.
 #OUTFILEBASEPATH=${HOME}/radio
 LOGFILE=${HOME}/.dikoreco.log
 M4ATAG=$(cd $(dirname $0); pwd)/m4atag
+
+####
+# Define authorize key value (from http://radiko.jp/apps/js/playerCommon.js)
+RADIKO_AUTHKEY_VALUE="bcd151073c03b352e1ef2fd66c32209da9ca0afa"
 
 #
 # log
@@ -55,14 +62,10 @@ CHANNEL=$3
 
 log "prefix:${OUTFILEPREFIX} rectime:${RECTIMEMIN} channel:${CHANNEL}"
 
-RTMPDUMP=/usr/bin/rtmpdump
 FFMPEG=/usr/bin/ffmpeg
-SWFEXTRACT=/usr/bin/swfextract
-WGET=/usr/bin/wget
+CURL=/usr/bin/curl
 
-OUTFILENAME=${OUTFILEBASEPATH}/${OUTFILEPREFIX}_`date +%Y-%m-%d`
-FLVFILEEXT=".flv"
-#AACFILEEXT=".aac"
+OUTFILENAME=${OUTFILEBASEPATH}/${OUTFILEPREFIX}_${date}
 M4AFILEEXT=".m4a"
 
 MARGINTIMEMIN=1
@@ -72,39 +75,10 @@ if [ "x${RECTIME}" = "x" ]; then
   exit 1
 fi
 
-#cd ${OUTFILEBASEPATH}
-
-playerurl=http://radiko.jp/apps/js/flash/myplayer-release.swf
-playerfile=${OUTFILEBASEPATH}/player.swf
-keyfile=${OUTFILEBASEPATH}/authkey.png
 filelist=${OUTFILEBASEPATH}/list.txt
-auth1_fms=${OUTFILEBASEPATH}/auth1_fms_${OUTFILEPREFIX}_${CHANNEL}
-auth2_fms=${OUTFILEBASEPATH}/auth2_fms_${OUTFILEPREFIX}_${CHANNEL}
+auth1_fms=${OUTFILEBASEPATH}/auth1_fms_${pid}
+auth2_fms=${OUTFILEBASEPATH}/auth2_fms_${pid}
 channel_xml=${OUTFILEBASEPATH}/${CHANNEL}.xml
-
-#
-# get player
-#
-if [ ! -f $playerfile ]; then
-  ${WGET} -q -O $playerfile $playerurl
-
-  if [ $? -ne 0 ]; then
-    log "failed get player"
-    exit 1
-  fi
-fi
-
-#
-# get keydata (need swftools)
-#
-if [ ! -f $keyfile ]; then
-  ${SWFEXTRACT} -b 12 $playerfile -o $keyfile
-
-  if [ ! -f $keyfile ]; then
-    log "failed get keydata"
-    exit 1
-  fi
-fi
 
 if [ -f ${auth1_fms} ]; then
   rm -f ${auth1_fms}
@@ -113,22 +87,23 @@ fi
 #
 # access auth1_fms
 #
-${WGET} -q \
-     --header="pragma: no-cache" \
-     --header="X-Radiko-App: pc_ts" \
-     --header="X-Radiko-App-Version: 4.0.0" \
-     --header="X-Radiko-User: test-stream" \
-     --header="X-Radiko-Device: pc" \
-     --post-data='\r\n' \
-     --no-check-certificate \
-     --save-headers \
-     --tries=5 \
-     --timeout=5 \
-     -O ${auth1_fms} \
-     https://radiko.jp/v2/api/auth1_fms
+${CURL} -s \
+        --header "pragma: no-cache" \
+        --header "X-Radiko-App: pc_html5" \
+        --header "X-Radiko-App-Version: 0.0.1" \
+        --header "X-Radiko-User: test-stream" \
+        --header "X-Radiko-Device: pc" \
+        --dump-header ${auth1_fms} \
+        -o /dev/null \
+        https://radiko.jp/v2/api/auth1
 
 if [ $? -ne 0 ]; then
   log "failed auth1 process"
+  exit 1
+fi
+
+if [ ! -f ${auth1_fms} ]; then
+  log "failed get auth1_fms"
   exit 1
 fi
 
@@ -139,33 +114,27 @@ authtoken=`cat ${auth1_fms} | perl -ne 'print $1 if(/x-radiko-authtoken: ([\w-]+
 offset=`cat ${auth1_fms} | perl -ne 'print $1 if(/x-radiko-keyoffset: (\d+)/i)'`
 length=`cat ${auth1_fms} | perl -ne 'print $1 if(/x-radiko-keylength: (\d+)/i)'`
 
-partialkey=`dd if=$keyfile bs=1 skip=${offset} count=${length} 2> /dev/null | base64`
+partialkey=`echo "${RADIKO_AUTHKEY_VALUE}" | dd bs=1 "skip=${offset}" "count=${length}" 2> /dev/null | base64`
 
 #echo -e "authtoken: ${authtoken} \noffset: ${offset} length: ${length} \npartialkey: $partialkey"
 
 rm -f ${auth1_fms}
 
-if [ -f ${auth2_fms} ]; then
+if [ -f ${auth2_fms} ]; then  
   rm -f ${auth2_fms}
 fi
 
 #
 # access auth2_fms
 #
-${WGET} -q \
-     --header="pragma: no-cache" \
-     --header="X-Radiko-App: pc_ts" \
-     --header="X-Radiko-App-Version: 4.0.0" \
-     --header="X-Radiko-User: test-stream" \
-     --header="X-Radiko-Device: pc" \
-     --header="X-Radiko-Authtoken: ${authtoken}" \
-     --header="X-Radiko-Partialkey: ${partialkey}" \
-     --post-data='\r\n' \
-     --no-check-certificate \
-     --tries=5 \
-     --timeout=5 \
-     -O ${auth2_fms} \
-     https://radiko.jp/v2/api/auth2_fms
+${CURL} -s \
+        --header "pragma: no-cache" \
+        --header "X-Radiko-User: test-stream" \
+        --header "X-Radiko-Device: pc" \
+        --header "X-Radiko-AuthToken: ${authtoken}" \
+        --header "X-Radiko-PartialKey: ${partialkey}" \
+        -o ${auth2_fms} \
+        https://radiko.jp/v2/api/auth2
 
 if [ $? -ne 0 -o ! -f ${auth2_fms} ]; then
   log "failed auth2 process"
@@ -174,64 +143,67 @@ fi
 
 #echo "authentication success"
 
+# ISO 3166-2:JP (Codes of Prefectures)
 areaid=`cat ${auth2_fms} | perl -ne 'print $1 if(/^([^,]+),/i)'`
-#echo "areaid: $areaid"
+log "areaid: $areaid"
 
 rm -f ${auth2_fms}
 
 #
 # get stream-url
 #
-
 if [ -f ${channel_xml} ]; then
   rm -f ${channel_xml}
 fi
 
-${WGET} -q "http://radiko.jp/v2/station/stream/${CHANNEL}.xml" -O ${channel_xml}
+${CURL} -s "http://radiko.jp/v2/station/stream_smh_multi/${CHANNEL}.xml" -o ${channel_xml}
+res=`head -1 ${channel_xml} | grep -c "<?xml version"`
+if [ ${res} -ne 1 ]; then
+  log "unknown channel"
+  rm -f ${channel_xml}
+  exit 1
+fi
 
-stream_url=`echo "cat /url/item[1]/text()" | xmllint --shell ${channel_xml} | tail -2 | head -1`
-declare -a url_parts=(`echo ${stream_url} | perl -pe 's!^(.*)://(.*?)/(.*)/(.*?)$/!$1://$2 $3 $4!'`)
+stream_url=`xmllint --xpath "/urls/url[@areafree='0'][1]/playlist_create_url/text()" ${channel_xml}`
 
 rm -f ${channel_xml}
 
 #
-# rtmpdump
+# record radio
 #
-#url_parts0: rtmpe://f-radiko.smartstream.ne.jp
-#url_parts1: TBS/_definst_
-#url_parts2: simul-stream.stream
 RETRYCOUNT=0
 while :
 do
-#  ${RTMPDUMP} -v \
-  ${RTMPDUMP} -q \
-              -r ${url_parts[0]} \
-              --playpath ${url_parts[2]} \
-              --app ${url_parts[1]} \
-              -W $playerurl \
-              -C S:"" -C S:"" -C S:"" -C S:$authtoken \
-              --live \
-              --flv ${OUTFILENAME}${FLVFILEEXT} \
-              --stop ${RECTIME}
-  if [ $? -ne 1 -o `wc -c ${OUTFILENAME}${FLVFILEEXT} | awk '{print $1}'` -ge 10240 ]; then
+  ${FFMPEG} \
+      -loglevel error \
+      -fflags +discardcorrupt \
+      -headers "X-Radiko-Authtoken: ${authtoken}" \
+      -i "${stream_url}" \
+      -acodec copy \
+      -vn \
+      -bsf:a aac_adtstoasc \
+      -y \
+      -t ${RECTIME} \
+      "${OUTFILENAME}${M4AFILEEXT}"
+  if [ $? -ne 1 ]; then
     break
   elif [ ${RETRYCOUNT} -ge 5 ]; then
-    log "failed rtmpdump"
+    log "failed to record"
     exit 1
   else
     RETRYCOUNT=`expr ${RETRYCOUNT} + 1`
   fi
 done
 
-#${FFMPEG} -loglevel quiet -y -i "${OUTFILENAME}${FLVFILEEXT}" -vn -acodec copy "${OUTFILENAME}${AACFILEEXT}"
-${FFMPEG} -loglevel quiet -y -i "${OUTFILENAME}${FLVFILEEXT}" -vn -acodec copy "${OUTFILENAME}${M4AFILEEXT}"
-
 if [ -f ${OUTFILENAME}${M4AFILEEXT} ]; then
-  rm -f ${OUTFILENAME}${FLVFILEEXT}
+  # add m4a tag
   (cd ${OUTFILEBASEPATH} && ${M4ATAG} ${OUTFILENAME}${M4AFILEEXT})
 fi
 
-
+#
+# update file list
+#
 (cd ${OUTFILEBASEPATH} && ls *.m4a > ${filelist})
 
 log "finish ${OUTFILENAME}${M4AFILEEXT}"
+

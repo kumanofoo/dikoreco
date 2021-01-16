@@ -1,0 +1,4 @@
+#!/bin/bash
+
+bats test/m4atag.bats
+bats test/record.bats

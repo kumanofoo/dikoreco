@@ -1,0 +1,9 @@
+version: '3'
+services:
+  dikoreco:
+    build: .
+    image: dikoreco
+    container_name: dikoreco_container
+    volumes:
+      - ./:/opt/dikoreco/
+    tty: true

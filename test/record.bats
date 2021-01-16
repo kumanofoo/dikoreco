@@ -7,8 +7,6 @@ teardown() {
     rm -f ${LOGFILE}
     rm -f m4atag.json
     rm -f list.txt
-    rm -f authkey.png
-    rm -f player.swf
 }
 
 @test "Show usage" {
@@ -29,7 +27,7 @@ teardown() {
 @test "Unknown channel" {
     rm -f ${LOGFILE}
     
-    result="$(./dikoreco rectest 1 XYZ; grep -c "failed rtmpdump" ${LOGFILE})"
+    result="$(./dikoreco rectest 1 XYZ; grep -c "unknown channel" ${LOGFILE})"
     [ "$result" -eq 1 ]
 }
 
