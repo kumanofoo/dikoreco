@@ -57,7 +57,7 @@ def add_tags(m4afile, program_db={}):
     prefix = filename.split('.')[0]
     items = prefix.split('_')
     date = items[-1]
-    program = prefix.removesuffix('_'+date)
+    program = prefix[:-len('_'+date)]
     year, month, day = date.split('-')
     if program in program_db:
         for item in program_db[program]:
