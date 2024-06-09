@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from mutagen.mp4 import MP4
+from mutagen.mp4 import MP4, MP4Cover
 import glob
 import subprocess
 import sys
@@ -14,6 +14,7 @@ tags = {
     'encoder': u'©too',
     'year': u'©day',
     'title': u'©nam',
+    'artwork': u'covr',
 }
 
 def load_tags(filename="m4atag.json"):
@@ -38,15 +39,35 @@ def load_tags(filename="m4atag.json"):
     return program_db
 
 
+def load_artwork(cover_file):
+    artwork = None
+    image_type = None
+    with open(cover_file, "rb") as f:
+        artwork = f.read()
+        if cover_file.endswith(("png", "PNG")):
+            image_type = MP4Cover.FORMAT_PNG
+        if cover_file.endswith(("jpg", "JPG", "jpeg", "JPEG")):
+            image_type = MP4Cover.FORMAT_JPEG
+    return (artwork, image_type)
+
+
 def add_tags(m4afile, program_db={}):
     directory, filename = os.path.split(m4afile)
     m4aaudio = MP4(m4afile)
     prefix = filename.split('.')[0]
-    program, date = prefix.split('_')
+    items = prefix.split('_')
+    date = items[-1]
+    program = prefix.removesuffix('_'+date)
     year, month, day = date.split('-')
     if program in program_db:
         for item in program_db[program]:
-            m4aaudio[item] = [program_db[program][item]]
+            if item == 'covr':
+                cover_file = program_db[program][item]
+                (artwork, image_type) = load_artwork(cover_file)
+                if artwork and image_type:
+                    m4aaudio['covr'] = [MP4Cover(artwork, image_type)]
+            else:
+                m4aaudio[item] = [program_db[program][item]]
         m4aaudio[u'©nam'] = ["%s%s%s" % (year, month, day)]
         m4aaudio[u'©day'] = [year]
         m4aaudio.save()
@@ -58,7 +79,16 @@ def show_tags(m4afile):
     for tag in sorted(m4aaudio):
         if tag in tags.values():
             key = [k for k, v in tags.items() if v == tag]
-            print(key[0], ':', m4aaudio[tag])
+            if tag == 'covr':
+                print(key[0], ':', end=' ')
+                if m4aaudio[tag][0].imageformat == MP4Cover.FORMAT_PNG:
+                    print("PNG")
+                elif m4aaudio[tag][0].imageformat == MP4Cover.FORMAT_JPEG:
+                    print("JPEG")
+                else:
+                    print("unknown format")
+            else:
+                print(key[0], ':', m4aaudio[tag])
         else:
             print(tag, ':', m4aaudio[tag])
     print()

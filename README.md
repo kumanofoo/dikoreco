@@ -39,6 +39,7 @@ Show m4a tags.
 ```Shell
 $ m4atag -s megane_2019-10-18.m4a
 megane_2019-10-18.m4a
+artwork : JPEG
 personality : ['Ogiyahagi']
 program : ['Ogiyahagi no megane biiki']
 year : ['2019']
@@ -53,12 +54,14 @@ Edit tags in m4atag.json.
     "audrey": {
         "personality": "Audrey",
         "program": "Audrey no all night nippon",
-        "genre": "radio"
+        "genre": "radio",
+        "artwork": "audrey.png"
     },
     "megane": {
         "personality": "Ogiyahagi",
         "program": "Ogiyahagi no megane biiki",
-        "genre": "radio"
+        "genre": "radio",
+        "artwork": "megane.jpg"
     }
 }
 ```

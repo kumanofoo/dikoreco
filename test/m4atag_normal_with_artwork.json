@@ -1,0 +1,30 @@
+{
+    "audrey": {
+        "personality": "Audrey",
+        "program": "Audrey no all night nippon",
+        "genre": "radio"
+    },
+    "megane": {
+        "personality": "Ogiyahagi",
+        "program": "Ogiyahagi no megane biiki",
+        "genre": "radio"
+    },
+    "rectest_png": {
+        "personality": "boo",
+        "program": "foo foo",
+        "genre": "woo",
+        "artwork": "test/rectest.png"
+    },
+    "rectest_jpg": {
+        "personality": "boo",
+        "program": "foo foo",
+        "genre": "woo",
+        "artwork": "test/rectest.jpg"
+    },
+    "rectest_jpeg": {
+        "personality": "boo",
+        "program": "foo foo",
+        "genre": "woo",
+        "artwork": "test/rectest.jpeg"
+    }
+}

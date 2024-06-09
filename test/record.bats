@@ -27,7 +27,7 @@ teardown() {
 @test "Unknown channel" {
     rm -f ${LOGFILE}
     
-    result="$(./dikoreco rectest 1 XYZ; grep -c "unknown channel" ${LOGFILE})"
+    result="$(./dikoreco rectest 1 XYZ; grep -c "failed to record" ${LOGFILE})"
     [ "$result" -eq 1 ]
 }
 

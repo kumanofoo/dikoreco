@@ -2,11 +2,13 @@
     "audrey": {
         "personality": "Audrey",
         "program": "Audrey no all night nippon",
-        "genre": "radio"
+        "genre": "radio",
+        "artwork": "audrey.png"
     },
     "megane": {
         "personality": "Ogiyahagi",
         "program": "Ogiyahagi no megane biiki",
-        "genre": "radio"
+        "genre": "radio",
+        "artwork": "megane.jpeg"
     }
 }
