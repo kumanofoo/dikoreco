@@ -22,8 +22,8 @@ EOD
 pid=$$
 date=`date +%Y-%m-%d`
 
-OUTFILEBASEPATH=.
-#OUTFILEBASEPATH=${HOME}/radio
+WORKDIR=.
+#WORKDIR=${HOME}/radio
 LOGFILE=${HOME}/.dikoreco.log
 M4ATAG=$(cd $(dirname $0); pwd)/m4atag
 
@@ -65,7 +65,7 @@ log "prefix:${OUTFILEPREFIX} rectime:${RECTIMEMIN} channel:${CHANNEL}"
 FFMPEG=/usr/bin/ffmpeg
 CURL=/usr/bin/curl
 
-OUTFILENAME=${OUTFILEBASEPATH}/${OUTFILEPREFIX}_${date}
+OUTFILENAME=${WORKDIR}/${OUTFILEPREFIX}_${date}
 M4AFILEEXT=".m4a"
 
 MARGINTIMEMIN=1
@@ -75,10 +75,9 @@ if [ "x${RECTIME}" = "x" ]; then
   exit 1
 fi
 
-filelist=${OUTFILEBASEPATH}/list.txt
-auth1_fms=${OUTFILEBASEPATH}/auth1_fms_${pid}
-auth2_fms=${OUTFILEBASEPATH}/auth2_fms_${pid}
-channel_xml=${OUTFILEBASEPATH}/${CHANNEL}.xml
+auth1_fms=${WORKDIR}/auth1_fms_${pid}
+auth2_fms=${WORKDIR}/auth2_fms_${pid}
+channel_xml=${WORKDIR}/${CHANNEL}.xml
 
 if [ -f ${auth1_fms} ]; then
   rm -f ${auth1_fms}
@@ -163,10 +162,12 @@ if [ ${res} -ne 1 ]; then
   rm -f ${channel_xml}
   exit 1
 fi
-
 stream_url=`xmllint --xpath "/urls/url[@areafree='0'][1]/playlist_create_url/text()" ${channel_xml}`
-
 rm -f ${channel_xml}
+if [ -z ${stream_url} ]; then
+    log "unknown channel"
+    exit 1
+fi
 
 #
 # record radio
@@ -197,13 +198,18 @@ done
 
 if [ -f ${OUTFILENAME}${M4AFILEEXT} ]; then
   # add m4a tag
-  (cd ${OUTFILEBASEPATH} && ${M4ATAG} ${OUTFILENAME}${M4AFILEEXT})
+  (cd ${WORKDIR} && ${M4ATAG} ${OUTFILENAME}${M4AFILEEXT})
 fi
 
 #
-# update file list
+# move the m4a file to DIKORECO_OUTDIR and update file list
 #
-(cd ${OUTFILEBASEPATH} && ls *.m4a > ${filelist})
+if [ -z ${DIKORECO_OUTDIR+x} ]; then
+    DIKORECO_OUTDIR=${WORKDIR}
+else
+    mv ${OUTFILENAME}${M4AFILEEXT} ${DIKORECO_OUTDIR}
+fi
+(cd ${DIKORECO_OUTDIR} && ls *.m4a > list.txt)
 
 log "finish ${OUTFILENAME}${M4AFILEEXT}"
 
