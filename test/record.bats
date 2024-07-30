@@ -27,7 +27,7 @@ teardown() {
 @test "Unknown channel" {
     rm -f ${LOGFILE}
     
-    result="$(./dikoreco rectest 1 XYZ; grep -c "failed to record" ${LOGFILE})"
+    result="$(./dikoreco rectest 1 XYZ; grep -c "unknown channel" ${LOGFILE})"
     [ "$result" -eq 1 ]
 }
 
@@ -63,4 +63,26 @@ teardown() {
     [ "$result" -eq 6 ]
 }
 
+@test "Record sound with output directory" {
+    test_outdir=rectest_outdir
+    if [ -d ${test_outdir} ]; then
+	rm -f ${test_outdir}/rectest*.m4a ${test_outdir}/list.txt
+    else
+	mkdir ${test_outdir}
+    fi
+    rm -f ${LOGFILE}
+    cp test/m4atag_normal.json m4atag.json
 
+    DIKORECO_OUTDIR="${test_outdir}" run ./dikoreco rectest 1 RN1
+    [ "$status" -eq 0 ]
+
+    result="$(grep -c "finish ./rectest_" ${LOGFILE})"
+    [ "$result" -eq 1 ]
+
+    result="$(file ${test_outdir}/rectest*.m4a | grep -c "Apple iTunes")"
+    [ "$result" -eq 1 ]
+
+    result="$(./m4atag -s ${test_outdir}/rectest*.m4a | grep -c -e personality -e program -e year -e genre -e title -e encoder)"
+    [ "$result" -eq 6 ]
+    rm -r "${test_outdir}"
+}
