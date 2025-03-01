@@ -162,7 +162,7 @@ if [ ${res} -ne 1 ]; then
   rm -f ${channel_xml}
   exit 1
 fi
-stream_url=`xmllint --xpath "/urls/url[@areafree='0'][1]/playlist_create_url/text()" ${channel_xml}`
+stream_url=`xmllint --xpath "/urls/url[@areafree='1'][2]/playlist_create_url/text()" ${channel_xml}`
 rm -f ${channel_xml}
 if [ -z ${stream_url} ]; then
     log "unknown channel"
