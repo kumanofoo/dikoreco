@@ -155,19 +155,20 @@ if [ -f ${channel_xml} ]; then
   rm -f ${channel_xml}
 fi
 
-${CURL} -s "http://radiko.jp/v2/station/stream_smh_multi/${CHANNEL}.xml" -o ${channel_xml}
+${CURL} -s "http://radiko.jp/v3/station/stream/pc_html5/${CHANNEL}.xml" -o ${channel_xml}
 res=`head -1 ${channel_xml} | grep -c "<?xml version"`
 if [ ${res} -ne 1 ]; then
   log "unknown channel"
   rm -f ${channel_xml}
   exit 1
 fi
-stream_url=`xmllint --xpath "/urls/url[@areafree='1'][2]/playlist_create_url/text()" ${channel_xml}`
+base_url=`xmllint --xpath "/urls/url[@timefree='0' and @areafree='0'][2]/playlist_create_url/text()" ${channel_xml}`
 rm -f ${channel_xml}
-if [ -z ${stream_url} ]; then
+if [ -z ${base_url} ]; then
     log "unknown channel"
     exit 1
 fi
+stream_url="${base_url}?station_id=${CHANNEL}&l=15&type=c&lsid="
 
 #
 # record radio
