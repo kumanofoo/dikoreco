@@ -37,7 +37,7 @@ RADIKO_AUTHKEY_VALUE="bcd151073c03b352e1ef2fd66c32209da9ca0afa"
 readonly PROCNAME=${0##*/}
 function log() {
   local fname=${BASH_SOURCE[1]##*/}
-  echo -e "$(date '+%Y-%m-%dT%H:%M:%S') ${PROCNAME} (${fname}:${BASH_LINENO[0]}:${FUNCNAME[1]}) $@" >> ${LOGFILE}
+  echo -e "$(date '+%Y-%m-%dT%H:%M:%S') ${PROCNAME} (${fname}:${BASH_LINENO[0]}:${FUNCNAME[1]}) $1" >> ${LOGFILE}
 }
 
 log "start"
@@ -52,7 +52,6 @@ if [ $# -eq 3 ]; then
 else
   echo "usage : ${0##*/} OUTFILEPREFIX RECTIMEMIN CHANNEL"
   show_channel
-  log "usage : $0 OUTFILEPREFIX RECTIMEMIN CHANNEL"
   exit 1
 fi
 
@@ -165,8 +164,8 @@ fi
 base_url=`xmllint --xpath "/urls/url[@timefree='0' and @areafree='0'][2]/playlist_create_url/text()" ${channel_xml}`
 rm -f ${channel_xml}
 if [ -z ${base_url} ]; then
-    log "unknown channel"
-    exit 1
+  log "unknown channel"
+  exit 1
 fi
 stream_url="${base_url}?station_id=${CHANNEL}&l=15&type=c&lsid="
 
@@ -187,14 +186,23 @@ do
       -y \
       -t ${RECTIME} \
       "${OUTFILENAME}${M4AFILEEXT}"
-  if [ $? -ne 1 ]; then
-    break
-  elif [ ${RETRYCOUNT} -ge 5 ]; then
-    log "failed to record"
-    exit 1
-  else
-    RETRYCOUNT=`expr ${RETRYCOUNT} + 1`
-  fi
+  case $? in
+    0) break
+       echo $?
+       ;;
+    1)
+      if [ ${RETRYCOUNT} -ge 5 ]; then
+        log "failed to record"
+        exit 1
+      else
+        RETRYCOUNT=`expr ${RETRYCOUNT} + 1`
+      fi
+      ;;
+    *)
+      log "failed to record"
+      exit 1
+      ;;
+  esac
 done
 
 if [ -f ${OUTFILENAME}${M4AFILEEXT} ]; then
