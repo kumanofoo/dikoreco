@@ -20,14 +20,14 @@ teardown() {
 @test "Parsing recording time failed" {
     rm -f ${LOGFILE}
     
-    result="$(./dikoreco rectest ooo RN1; grep -c "failed recording time" ${LOGFILE})"
+    result="$(./dikoreco rectest ooo RN1; grep -c "Failed to calculate the recording time" ${LOGFILE})"
     [ "$result" -eq 1 ]
 }
 
 @test "Unknown channel" {
     rm -f ${LOGFILE}
     
-    result="$(./dikoreco rectest 1 XYZ; grep -c "unknown channel" ${LOGFILE})"
+    result="$(./dikoreco rectest 1 XYZ; grep -c "\[error\] stream URL not found." ${LOGFILE})"
     [ "$result" -eq 1 ]
 }
 
@@ -38,7 +38,7 @@ teardown() {
     run ./dikoreco rectest 1 RN1
     [ "$status" -eq 0 ]
 
-    result="$(grep -c "finish ./rectest_" ${LOGFILE})"
+    result="$(grep -c "\[finish\] ./rectest_" ${LOGFILE})"
     [ "$result" -eq 1 ]
     
     result="$(file rectest*.m4a | grep -c "Apple iTunes")"
@@ -53,7 +53,7 @@ teardown() {
     run ./dikoreco rectest 1 RN1
     [ "$status" -eq 0 ]
     
-    result="$(grep -c "finish ./rectest_" ${LOGFILE})"
+    result="$(grep -c "\[finish\] ./rectest_" ${LOGFILE})"
     [ "$result" -eq 1 ]
     
     result="$(file rectest*.m4a | grep -c "Apple iTunes")"
@@ -76,7 +76,7 @@ teardown() {
     DIKORECO_OUTDIR="${test_outdir}" run ./dikoreco rectest 1 RN1
     [ "$status" -eq 0 ]
 
-    result="$(grep -c "finish ./rectest_" ${LOGFILE})"
+    result="$(grep -c "\[finish\] ./rectest_" ${LOGFILE})"
     [ "$result" -eq 1 ]
 
     result="$(file ${test_outdir}/rectest*.m4a | grep -c "Apple iTunes")"

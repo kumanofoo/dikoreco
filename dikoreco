@@ -19,6 +19,23 @@ CHANNEL:
 EOD
 }
 
+function webhook {
+    #DIKORECO_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    #DIKORECO_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+    content="$(cat)"
+    if [ -n "$DIKORECO_DISCORD_WEBHOOK_URL" ]; then
+        #content="{\"content\": \"$(cat)\"}"
+        content=$(jq -n --arg content "$content" '{"content": $content}')
+        curl -X POST -H 'Content-type: application/json' -d "$content" "$DIKORECO_DISCORD_WEBHOOK_URL"
+    fi
+    if [ -n "$DIKORECO_SLACK_WEBHOOK_URL" ]; then
+        #content="{\"text\": \"$(cat)\"}"
+        content=$(jq -n --arg content "$content" '{"text": $content}')
+        curl -X POST -H 'Content-type: application/json' -d "$content" "$DIKORECO_SLACK_WEBHOOK_URL"
+    fi
+}
+
 pid=$$
 date=`date +%Y-%m-%d`
 
@@ -40,8 +57,6 @@ function log() {
   echo -e "$(date '+%Y-%m-%dT%H:%M:%S') ${PROCNAME} (${fname}:${BASH_LINENO[0]}:${FUNCNAME[1]}) $1" >> ${LOGFILE}
 }
 
-log "start"
-
 #
 # check parameters
 #
@@ -59,8 +74,6 @@ OUTFILEPREFIX=$1
 RECTIMEMIN=$2
 CHANNEL=$3
 
-log "prefix:${OUTFILEPREFIX} rectime:${RECTIMEMIN} channel:${CHANNEL}"
-
 FFMPEG=/usr/bin/ffmpeg
 CURL=/usr/bin/curl
 
@@ -68,11 +81,13 @@ OUTFILENAME=${WORKDIR}/${OUTFILEPREFIX}_${date}
 M4AFILEEXT=".m4a"
 
 MARGINTIMEMIN=1
-RECTIME=`expr ${RECTIMEMIN} \* 60 + ${MARGINTIMEMIN} \* 2 \* 60`
+RECTIME=`expr ${RECTIMEMIN} \* 60 + ${MARGINTIMEMIN} \* 2 \* 60 2> /dev/null`
 if [ "x${RECTIME}" = "x" ]; then
-  log "failed recording time"
+  log "Failed to calculate the recording time."
   exit 1
 fi
+
+log "[start] prefix:${OUTFILEPREFIX} rectime:${RECTIMEMIN} channel:${CHANNEL}"
 
 auth1_fms=${WORKDIR}/auth1_fms_${pid}
 auth2_fms=${WORKDIR}/auth2_fms_${pid}
@@ -95,13 +110,8 @@ ${CURL} -s \
         -o /dev/null \
         https://radiko.jp/v2/api/auth1
 
-if [ $? -ne 0 ]; then
-  log "failed auth1 process"
-  exit 1
-fi
-
-if [ ! -f ${auth1_fms} ]; then
-  log "failed get auth1_fms"
+if [ $? -ne 0 -o ! -f ${auth1_fms} ]; then
+  log "[error] failed to obtain auth1"
   exit 1
 fi
 
@@ -135,7 +145,7 @@ ${CURL} -s \
         https://radiko.jp/v2/api/auth2
 
 if [ $? -ne 0 -o ! -f ${auth2_fms} ]; then
-  log "failed auth2 process"
+  log "[error] failed to obtain auth2."
   exit 1
 fi
 
@@ -143,8 +153,6 @@ fi
 
 # ISO 3166-2:JP (Codes of Prefectures)
 areaid=`cat ${auth2_fms} | perl -ne 'print $1 if(/^([^,]+),/i)'`
-log "areaid: $areaid"
-
 rm -f ${auth2_fms}
 
 #
@@ -157,14 +165,14 @@ fi
 ${CURL} -s "http://radiko.jp/v3/station/stream/pc_html5/${CHANNEL}.xml" -o ${channel_xml}
 res=`head -1 ${channel_xml} | grep -c "<?xml version"`
 if [ ${res} -ne 1 ]; then
-  log "unknown channel"
+  log "[error] unknown channel."
   rm -f ${channel_xml}
   exit 1
 fi
-base_url=`xmllint --xpath "/urls/url[@timefree='0' and @areafree='0'][2]/playlist_create_url/text()" ${channel_xml}`
+base_url=`xmllint --xpath "/urls/url[@timefree='0' and @areafree='0'][2]/playlist_create_url/text()" ${channel_xml} 2> /dev/null`
 rm -f ${channel_xml}
 if [ -z ${base_url} ]; then
-  log "unknown channel"
+  log "[error] stream URL not found."
   exit 1
 fi
 stream_url="${base_url}?station_id=${CHANNEL}&l=15&type=c&lsid="
@@ -175,7 +183,7 @@ stream_url="${base_url}?station_id=${CHANNEL}&l=15&type=c&lsid="
 RETRYCOUNT=0
 while :
 do
-  ${FFMPEG} \
+  err=$(${FFMPEG} \
       -loglevel error \
       -fflags +discardcorrupt \
       -headers "X-Radiko-Authtoken: ${authtoken}" \
@@ -185,21 +193,29 @@ do
       -bsf:a aac_adtstoasc \
       -y \
       -t ${RECTIME} \
-      "${OUTFILENAME}${M4AFILEEXT}"
+      "${OUTFILENAME}${M4AFILEEXT}" 2>&1)
   case $? in
     0) break
        echo $?
        ;;
     1)
       if [ ${RETRYCOUNT} -ge 5 ]; then
-        log "failed to record"
+        log "[error] failed to record after retrying."
+        printf "dikoreco failed to record after 5 retries." | webhook
         exit 1
       else
         RETRYCOUNT=`expr ${RETRYCOUNT} + 1`
+        log "[warn] retry to record(${RETRYCOUNT})."
       fi
       ;;
     *)
-      log "failed to record"
+      if [ -n "${err}" ]; then
+        message=$'[error] failed to record.\n'
+        log "${message}$(echo "$err" | sed 's/^/  ffmpeg: /')"
+      else
+        log "[error] failed to record."
+      fi
+      printf "dikoreco failed to record." | webhook
       exit 1
       ;;
   esac
@@ -220,5 +236,5 @@ else
 fi
 (cd ${DIKORECO_OUTDIR} && ls *.m4a > list.txt)
 
-log "finish ${OUTFILENAME}${M4AFILEEXT}"
-
+log "[finish] ${OUTFILENAME}${M4AFILEEXT}"
+printf "dikoreco recorded '$(basename ${OUTFILENAME})${M4AFILEEXT}'." | webhook
