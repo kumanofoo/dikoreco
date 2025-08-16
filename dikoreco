@@ -20,17 +20,17 @@ EOD
 }
 
 function webhook {
-    #DIKORECO_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    #DIKORECO_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    #DIKORECO_DISCORD_WEBHOOK_URL='https://discord.com/api/webhooks/XXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    #DIKORECO_SLACK_WEBHOOK_URL='https://hooks.slack.com/services/XXXXXXXXXXXXXXXXXXXXXXXXXXXX'
 
     content="$(cat)"
     if [ -n "$DIKORECO_DISCORD_WEBHOOK_URL" ]; then
-        #content="{\"content\": \"$(cat)\"}"
+        #content="{\"content\": \"${content}\"}"
         content=$(jq -n --arg content "$content" '{"content": $content}')
         curl -X POST -H 'Content-type: application/json' -d "$content" "$DIKORECO_DISCORD_WEBHOOK_URL"
     fi
     if [ -n "$DIKORECO_SLACK_WEBHOOK_URL" ]; then
-        #content="{\"text\": \"$(cat)\"}"
+        #content="{\"text\": \"${content}\"}"
         content=$(jq -n --arg content "$content" '{"text": $content}')
         curl -X POST -H 'Content-type: application/json' -d "$content" "$DIKORECO_SLACK_WEBHOOK_URL"
     fi
