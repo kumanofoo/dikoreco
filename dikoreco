@@ -20,9 +20,6 @@ EOD
 }
 
 function webhook {
-    #DIKORECO_DISCORD_WEBHOOK_URL='https://discord.com/api/webhooks/XXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    #DIKORECO_SLACK_WEBHOOK_URL='https://hooks.slack.com/services/XXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-
     content="$(cat)"
     if [ -n "$DIKORECO_DISCORD_WEBHOOK_URL" ]; then
         #content="{\"content\": \"${content}\"}"
@@ -39,10 +36,19 @@ function webhook {
 pid=$$
 date=`date +%Y-%m-%d`
 
+###
+# Default values
 WORKDIR=.
-#WORKDIR=${HOME}/radio
 LOGFILE=${HOME}/.dikoreco.log
 M4ATAG=$(cd $(dirname $0); pwd)/m4atag
+#DIKORECO_DISCORD_WEBHOOK_URL='https://discord.com/api/webhooks/XXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+#DIKORECO_SLACK_WEBHOOK_URL='https://hooks.slack.com/services/XXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+
+# Load custom values
+DIKORECO_CONFIG=$(cd $(dirname $0); pwd)/dikoreco.conf
+if [ -f "$DIKORECO_CONFIG" ]; then
+    source "$DIKORECO_CONFIG"
+fi
 
 ####
 # Define authorize key value (from http://radiko.jp/apps/js/playerCommon.js)
